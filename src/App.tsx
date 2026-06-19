@@ -1,276 +1,141 @@
-import { useState, useEffect, useRef } from 'react';
-import { isConnected, requestAccess, signTransaction } from '@stellar/freighter-api';
-import { Horizon, TransactionBuilder, Operation, Networks, Keypair } from '@stellar/stellar-sdk';
-import {
-  Wallet,
-  Send,
-  Droplet,
-  AlertCircle,
-  CheckCircle2,
-  Loader2,
-  LogOut,
-  RefreshCw,
-  ExternalLink,
-  Activity,
-  Trash2,
-  Zap,
-  Copy,
-  Check,
-} from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { TransactionBuilder, Operation, Networks, Keypair } from '@stellar/stellar-sdk';
+import { Zap } from 'lucide-react';
 
-// ── Types ───────────────────────────────────────────────────
+import { useWallet } from './hooks/useWallet';
+import { useTransactionStatus } from './hooks/useTransactionStatus';
+import { useContract } from './hooks/useContract';
+import { useActivityFeed } from './hooks/useActivityFeed';
+import { ErrorBanner } from './components/ErrorBanner';
+import { TransactionStatus } from './components/TransactionStatus';
+import { WalletConnect } from './components/WalletConnect';
+import { ActivityFeed } from './components/ActivityFeed';
+import { ContractActions } from './components/ContractActions';
+import { classifyError } from './lib/errors';
+import type { AppError } from './types';
+import { horizonServer } from './lib/stellar';
 
-interface LogEntry {
-  id: string;
-  type: 'info' | 'success' | 'error';
-  message: string;
-  timestamp: string;
-}
-
-interface FreighterSignResult {
-  signedTxXdr?: string;
-  signerAddress?: string;
-  error?: string;
-}
-
-// ── Freighter helper ────────────────────────────────────────
-
-const getPublicKey = async (): Promise<string> => {
-  const result = await requestAccess();
-  if (result.error) {
-    throw new Error(typeof result.error === 'string' ? result.error : JSON.stringify(result.error));
-  }
-  return result.address;
-};
-
-// ── Component ───────────────────────────────────────────────
+const CONTRACT_ID = import.meta.env.VITE_CONTRACT_ID || '';
 
 export default function App() {
-  // Wallet state
-  const [hasFreighter, setHasFreighter] = useState<boolean | null>(null);
-  const [walletAddress, setWalletAddress] = useState<string>('');
-  const [balance, setBalance] = useState<string>('0.00');
-  const [isUnfunded, setIsUnfunded] = useState<boolean>(false);
-  const [isConnecting, setIsConnecting] = useState<boolean>(false);
-  const [copied, setCopied] = useState<boolean>(false);
+  const [logs, setLogs] = useState<Array<{ id: string; type: 'info' | 'success' | 'error'; message: string; timestamp: string }>>([]);
+  const [appError, setAppError] = useState<AppError | null>(null);
 
-  // Action state
-  const [isClaiming, setIsClaiming] = useState<boolean>(false);
-  const [isTransacting, setIsTransacting] = useState<boolean>(false);
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-
-  // Feedback
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [lastTxHash, setLastTxHash] = useState<string>('');
-  const [lastError, setLastError] = useState<string>('');
-
-  const logsEndRef = useRef<HTMLDivElement>(null);
-
-  // ── Helpers ─────────────────────────────────────────────
-
-  const addLog = (type: 'info' | 'success' | 'error', message: string) => {
+  // Helper to append a console log locally
+  const addLog = useCallback((type: 'info' | 'success' | 'error', message: string) => {
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    setLogs((prev) => [...prev, {
-      id: `${now.getTime()}-${Math.random()}`,
-      type,
-      message,
-      timestamp: timeStr,
-    }]);
-  };
-
-  const truncateAddress = (addr: string): string => {
-    if (!addr) return '';
-    return `${addr.slice(0, 6)}…${addr.slice(-6)}`;
-  };
-
-  const copyAddress = async () => {
-    if (!walletAddress) return;
-    await navigator.clipboard.writeText(walletAddress);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [logs]);
-
-  // ── Freighter check on mount ────────────────────────────
-
-  useEffect(() => {
-    let retries = 0;
-    const maxRetries = 10;
-    const checkFreighter = async () => {
-      try {
-        const result = await isConnected();
-        const connected = !!(result && result.isConnected);
-        if (connected) {
-          setHasFreighter(true);
-          addLog('info', 'Freighter detected — ready to connect.');
-        } else if (retries < maxRetries) {
-          retries++;
-          setTimeout(checkFreighter, 300);
-        } else {
-          setHasFreighter(false);
-          addLog('error', 'Freighter extension not found in this browser.');
-        }
-      } catch (err) {
-        if (retries < maxRetries) {
-          retries++;
-          setTimeout(checkFreighter, 300);
-        } else {
-          setHasFreighter(false);
-          const msg = err instanceof Error ? err.message : String(err);
-          addLog('error', `Wallet check failed: ${msg}`);
-        }
-      }
-    };
-    checkFreighter();
+    setLogs((prev) => [
+      ...prev,
+      {
+        id: `${now.getTime()}-${Math.random()}`,
+        type,
+        message,
+        timestamp: timeStr,
+      },
+    ]);
   }, []);
 
-  // ── Balance ─────────────────────────────────────────────
+  // 1. Wallet state management via kit
+  const {
+    walletAddress,
+    walletName,
+    walletIcon,
+    balance,
+    isUnfunded,
+    isConnecting,
+    isRefreshing,
+    handleConnect,
+    handleDisconnect,
+    fetchBalance,
+    signTx,
+  } = useWallet(addLog);
 
-  const fetchBalance = async (address: string, silent = false) => {
-    if (!address) return;
-    if (!silent) setIsRefreshing(true);
+  // 2. Transaction status tracking machines (unified or separate)
+  const friendbotTx = useTransactionStatus();
+  const paymentTx = useTransactionStatus();
+  const contractTx = useTransactionStatus();
 
-    try {
-      const server = new Horizon.Server('https://horizon-testnet.stellar.org');
-      const account = await server.loadAccount(address);
-      const native = account.balances.find((b) => b.asset_type === 'native');
+  // 3. Smart contract integrations
+  const { logActivity } = useContract(CONTRACT_ID, walletAddress, signTx, contractTx, addLog);
+  const { feed: onChainFeed, isPolling, refresh: refreshFeed } = useActivityFeed(CONTRACT_ID);
 
-      if (native) {
-        const amount = parseFloat(native.balance);
-        const formatted = amount.toLocaleString(undefined, {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 7,
-        });
-        setBalance(formatted);
-        setIsUnfunded(false);
-        if (!silent) addLog('success', `Balance refreshed: ${formatted} XLM`);
-      } else {
-        setBalance('0.00');
-        setIsUnfunded(true);
-        if (!silent) addLog('info', 'No native asset found on this account.');
-      }
-    } catch (err: unknown) {
-      let is404 = false;
-      let msg = 'Unknown error';
-      if (err && typeof err === 'object') {
-        const e = err as { response?: { status?: number }; message?: string };
-        if (e.response?.status === 404) is404 = true;
-        msg = e.message || String(err);
-      }
-      if (is404) {
-        setBalance('0.00');
-        setIsUnfunded(true);
-        if (!silent) addLog('info', 'Account not yet funded. Claim testnet XLM to activate it.');
-      } else {
-        setBalance('—');
-        if (!silent) addLog('error', `Balance fetch failed: ${msg}`);
-      }
-    } finally {
-      if (!silent) setIsRefreshing(false);
-    }
-  };
+  // Helper to handle general errors
+  const handleError = useCallback((err: any) => {
+    const classified = classifyError(err);
+    setAppError(classified);
+  }, []);
 
-  // ── Connect / Disconnect ────────────────────────────────
-
-  const handleConnect = async () => {
-    setIsConnecting(true);
-    setLastError('');
-    addLog('info', 'Opening Freighter…');
-
-    try {
-      const check = await isConnected();
-      if (!check || !check.isConnected) {
-        setHasFreighter(false);
-        addLog('error', 'Freighter is not active. Please install or enable it.');
-        setIsConnecting(false);
-        return;
-      }
-      const pubKey = await getPublicKey();
-      if (!pubKey) throw new Error('Address request was cancelled.');
-
-      setWalletAddress(pubKey);
-      addLog('success', `Connected: ${truncateAddress(pubKey)}`);
-      await fetchBalance(pubKey, false);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setLastError(msg);
-      addLog('error', `Connection failed: ${msg}`);
-    } finally {
-      setIsConnecting(false);
-    }
-  };
-
-  const handleDisconnect = () => {
-    addLog('info', `Disconnected from ${truncateAddress(walletAddress)}`);
-    setWalletAddress('');
-    setBalance('0.00');
-    setIsUnfunded(false);
-    setLastTxHash('');
-    setLastError('');
-  };
-
-  // ── Friendbot claim ─────────────────────────────────────
-
+  // Action: Friendbot Claim
   const handleClaimXlm = async () => {
     if (!walletAddress) return;
-    setIsClaiming(true);
-    setLastError('');
-    setLastTxHash('');
+    setAppError(null);
+    friendbotTx.setBuilding();
     addLog('info', 'Requesting 10,000 XLM from Friendbot…');
 
     try {
+      friendbotTx.setPending();
       const resp = await fetch(`https://friendbot.stellar.org?addr=${walletAddress}`);
 
       if (!resp.ok) {
         const text = await resp.text();
-
-        // Friendbot returns 400 when the account is already funded
         if (resp.status === 400 && text.includes('already funded')) {
           addLog('info', 'Account is already funded — no action needed.');
+          friendbotTx.reset();
           await fetchBalance(walletAddress, true);
           return;
         }
-
         throw new Error(text || `HTTP ${resp.status}`);
       }
 
-      addLog('success', 'Friendbot funded your account!');
+      addLog('success', 'Friendbot successfully funded your account!');
+      friendbotTx.setSuccess('friendbot_claim');
       await fetchBalance(walletAddress, true);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setLastError(msg);
-      addLog('error', `Claim failed: ${msg}`);
-    } finally {
-      setIsClaiming(false);
+      
+      // Attempt to log faucet request on-chain
+      try {
+        await logActivity('Requested Faucet');
+        refreshFeed();
+      } catch (err) {
+        console.error('Failed to log Faucet request on-chain:', err);
+      }
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      friendbotTx.setFailed(msg);
+      handleError(err);
     }
   };
 
-  // ── Send payment ────────────────────────────────────────
-
+  // Action: Test Payment Signing
   const handleSendTransaction = async () => {
     if (!walletAddress) return;
-    setIsTransacting(true);
-    setLastError('');
-    setLastTxHash('');
+    setAppError(null);
+    paymentTx.setBuilding();
     addLog('info', 'Building a 10 XLM test payment…');
 
     try {
-      const server = new Horizon.Server('https://horizon-testnet.stellar.org');
+      // Pre-check balance to trigger INSUFFICIENT_BALANCE
+      const accountData = await horizonServer.loadAccount(walletAddress);
+      const nativeBalance = accountData.balances.find(b => b.asset_type === 'native');
+      const xlmAmount = parseFloat(nativeBalance?.balance || '0');
 
-      // Generate a fresh random destination each time — avoids invalid/stale addresses
+      if (xlmAmount < 11) {
+        const errorObject = new Error('Insufficient XLM balance. Request testnet funds from Friendbot first.');
+        // Set type explicitly for classifier
+        (errorObject as any).type = 'INSUFFICIENT_BALANCE';
+        throw errorObject;
+      }
+
+      // Generate destination
       const randomKeypair = Keypair.random();
       const dest = randomKeypair.publicKey();
-      addLog('info', `Destination: ${dest.slice(0, 6)}…${dest.slice(-6)}`);
+      addLog('info', `Destination key: ${dest.slice(0, 6)}…${dest.slice(-6)}`);
 
-      addLog('info', 'Loading account sequence…');
-      const source = await server.loadAccount(walletAddress);
+      addLog('info', 'Loading sequence number…');
+      const source = await horizonServer.loadAccount(walletAddress);
 
       addLog('info', 'Constructing transaction…');
-      const fee = await server.fetchBaseFee();
+      const fee = await horizonServer.fetchBaseFee();
       const tx = new TransactionBuilder(source, {
         fee: fee.toString(),
         networkPassphrase: Networks.TESTNET,
@@ -280,72 +145,80 @@ export default function App() {
         .build();
 
       const xdr = tx.toXDR();
-      addLog('info', 'Requesting wallet signature…');
+      paymentTx.setSigning();
 
-      const result = await signTransaction(xdr, {
-        networkPassphrase: Networks.TESTNET,
-        address: walletAddress,
-      }) as string | FreighterSignResult;
+      // Sign transaction
+      const signedXdr = await signTx(xdr, walletAddress);
 
-      let signedXdr = '';
-      if (typeof result === 'string') {
-        signedXdr = result;
-      } else if (result && typeof result === 'object') {
-        if (result.error) throw new Error(typeof result.error === 'string' ? result.error : JSON.stringify(result.error));
-        if (result.signedTxXdr) signedXdr = result.signedTxXdr;
-        else throw new Error('Transaction was not signed.');
-      } else {
-        throw new Error('Invalid signature response.');
-      }
-
-      addLog('info', 'Broadcasting to Stellar Testnet…');
-      const signed = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
-      const submitResp = await server.submitTransaction(signed);
+      paymentTx.setPending();
+      addLog('info', 'Broadcasting payment transaction to Horizon…');
+      
+      const submitResp = await horizonServer.submitTransaction(
+        TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET)
+      );
 
       if (submitResp.successful) {
-        setLastTxHash(submitResp.hash);
-        addLog('success', `Transaction confirmed — ${submitResp.hash.slice(0, 12)}…`);
+        paymentTx.setSuccess(submitResp.hash);
+        addLog('success', `Payment transaction confirmed! Hash: ${submitResp.hash.slice(0, 12)}…`);
         await fetchBalance(walletAddress, true);
-      } else {
-        throw new Error('Transaction rejected by the network.');
-      }
-    } catch (err: unknown) {
-      let detail = 'Unknown error';
-      if (err && typeof err === 'object') {
-        const e = err as {
-          message?: string;
-          response?: { data?: { extras?: { result_codes?: { operations?: string[]; transaction?: string } } } };
-        };
-        if (e.response?.data?.extras?.result_codes) {
-          const codes = e.response.data.extras.result_codes;
-          detail = `${codes.transaction || 'tx_failed'} [${(codes.operations || []).join(', ')}]`;
-        } else {
-          detail = e.message || String(err);
+
+        // Attempt to log payment on-chain
+        try {
+          await logActivity('Sent Payment');
+          refreshFeed();
+        } catch (err) {
+          console.error('Failed to log Payment on-chain:', err);
         }
+      } else {
+        throw new Error('Transaction was rejected by the network.');
       }
-      setLastError(detail);
-      addLog('error', `Transaction failed: ${detail}`);
-    } finally {
-      setIsTransacting(false);
+    } catch (err: any) {
+      let detail = err?.message || String(err);
+      if (err?.response?.data?.extras?.result_codes) {
+        const codes = err.response.data.extras.result_codes;
+        detail = `${codes.transaction || 'tx_failed'} [${(codes.operations || []).join(', ')}]`;
+      }
+      paymentTx.setFailed(detail);
+      handleError(err);
     }
   };
 
-  // ── Clear logs ──────────────────────────────────────────
+  const handleCustomContractLog = async (action: string): Promise<string | undefined> => {
+    setAppError(null);
+    try {
+      const hash = await logActivity(action);
+      refreshFeed();
+      return hash;
+    } catch (err) {
+      handleError(err);
+      return undefined;
+    }
+  };
 
   const handleClearLogs = () => {
     setLogs([]);
-    addLog('info', 'Activity log cleared.');
+    addLog('info', 'Console logs cleared.');
   };
 
-  // ── Render ──────────────────────────────────────────────
 
+  // Combine local and on-chain logs, sorting or displaying appropriately
+  // For Level 2, we display the Live On-Chain feed in the dedicated ActivityFeed component,
+  // and local debug steps in the console feed.
+  
   return (
     <div className="min-h-screen w-full flex flex-col items-center px-4 py-12 md:py-16">
+      
+      {/* Error toasts */}
+      <ErrorBanner
+        error={appError}
+        onDismiss={() => setAppError(null)}
+        onFriendbotClaim={walletAddress ? handleClaimXlm : undefined}
+      />
 
-      {/* ═══ Main Card ═══ */}
+      {/* Main card wrapper */}
       <div className="w-full max-w-[640px] card-main rounded-2xl overflow-hidden animate-fade-in-up">
-
-        {/* ─── Header ─── */}
+        
+        {/* Header */}
         <div className="px-6 pt-6 pb-5 flex items-center justify-between border-b border-cyan-500/8">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center shadow-lg glow-teal-sm animate-float">
@@ -353,10 +226,10 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-[22px] font-bold tracking-tight text-white leading-tight">
-                Faucet Dash
+                Faucet Dash <span className="text-cyan-400 text-[12px] font-mono border border-cyan-500/20 px-1.5 py-0.5 rounded ml-1 bg-cyan-500/5">L2</span>
               </h1>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                Stellar Testnet Faucet Interface
+                Multi-wallet & Smart Contract Tracker
               </p>
             </div>
           </div>
@@ -367,133 +240,61 @@ export default function App() {
           </div>
         </div>
 
-        {/* ─── Body ─── */}
+        {/* Body */}
         <div className="p-6 space-y-5">
+          
+          {/* Wallet Integration Section */}
+          <WalletConnect
+            walletAddress={walletAddress}
+            walletName={walletName}
+            walletIcon={walletIcon}
+            balance={balance}
+            isUnfunded={isUnfunded}
+            isConnecting={isConnecting}
+            isRefreshing={isRefreshing}
+            onConnect={handleConnect}
+            onDisconnect={handleDisconnect}
+            onRefreshBalance={() => fetchBalance(walletAddress, false)}
+          />
 
-          {/* ── Wallet Section ── */}
-          <section className="card-panel rounded-xl p-5 space-y-4 animate-fade-in delay-100">
-            <div className="flex items-center justify-between">
-              <h2 className="text-[13px] font-semibold text-slate-200 flex items-center gap-2">
-                <Wallet className="w-4 h-4 text-cyan-400" />
-                Wallet
-              </h2>
-              {walletAddress && (
-                <button
-                  onClick={handleDisconnect}
-                  className="flex items-center gap-1 text-[11px] text-red-400/80 hover:text-red-300 transition-colors cursor-pointer"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  Disconnect
-                </button>
-              )}
-            </div>
+          {/* Persistent Transaction Status Bars (Only render if active) */}
+          <div className="space-y-3">
+            <TransactionStatus
+              status={friendbotTx.status}
+              txHash={friendbotTx.txHash}
+              errorMsg={friendbotTx.errorMsg}
+              onClose={friendbotTx.reset}
+              onRetry={handleClaimXlm}
+              label="Friendbot Faucet"
+            />
+            <TransactionStatus
+              status={paymentTx.status}
+              txHash={paymentTx.txHash}
+              errorMsg={paymentTx.errorMsg}
+              onClose={paymentTx.reset}
+              onRetry={handleSendTransaction}
+              label="10 XLM Payment"
+            />
+            <TransactionStatus
+              status={contractTx.status}
+              txHash={contractTx.txHash}
+              errorMsg={contractTx.errorMsg}
+              onClose={contractTx.reset}
+              label="ActivityLogger Contract"
+            />
+          </div>
 
-            {!walletAddress ? (
-              <div className="space-y-4">
-                <p className="text-slate-400 text-[13px] leading-relaxed">
-                  Connect your Freighter wallet to start using the testnet faucet.
-                </p>
-
-                {hasFreighter === false && (
-                  <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-500/5 border border-amber-500/12 text-amber-200 text-[12px]">
-                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
-                    <div>
-                      <span className="font-semibold block mb-0.5">Freighter not detected</span>
-                      Install the browser extension to get started.
-                      <a
-                        href="https://www.freighter.app/"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-semibold underline ml-1 text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1"
-                      >
-                        Get Freighter <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </div>
-                  </div>
-                )}
-
-                <button
-                  onClick={handleConnect}
-                  disabled={isConnecting}
-                  className="btn-primary w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-[13px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isConnecting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Connecting…
-                    </>
-                  ) : (
-                    <>
-                      <Wallet className="w-4 h-4" />
-                      Connect Freighter
-                    </>
-                  )}
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Address */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                    Account
-                  </label>
-                  <div className="card-inset rounded-lg px-3 py-2.5 flex items-center justify-between gap-2">
-                    <code className="text-slate-200 text-[12px] font-medium">
-                      {truncateAddress(walletAddress)}
-                    </code>
-                    <button
-                      onClick={copyAddress}
-                      className="text-slate-500 hover:text-cyan-400 transition-colors cursor-pointer"
-                      title="Copy full address"
-                    >
-                      {copied ? <Check className="w-3.5 h-3.5 text-teal-400" /> : <Copy className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Balance */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                      Balance
-                    </label>
-                    <button
-                      onClick={() => fetchBalance(walletAddress, false)}
-                      disabled={isRefreshing}
-                      className="text-cyan-400/70 hover:text-cyan-300 text-[10px] flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                    >
-                      <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-                      Refresh
-                    </button>
-                  </div>
-                  <div className="card-inset rounded-lg px-3 py-2.5">
-                    <span className={`text-[14px] font-bold ${isUnfunded ? 'text-amber-400' : 'text-white'}`}>
-                      {balance}
-                    </span>
-                    <span className="text-[11px] text-slate-500 ml-1.5 font-medium">XLM</span>
-                    {isUnfunded && (
-                      <span className="text-[10px] text-amber-400/70 ml-2 font-medium">Unfunded</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* ── Actions Section ── */}
+          {/* Standard Actions Panel */}
           <section className="card-panel rounded-xl p-5 space-y-4 animate-fade-in delay-200">
             <div>
               <h2 className="text-[13px] font-semibold text-slate-200 flex items-center gap-2">
-                <Activity className="w-4 h-4 text-cyan-400" />
-                Actions
+                <Zap className="w-4 h-4 text-cyan-400" />
+                Standard Actions
               </h2>
-              <p className="text-[12px] text-slate-500 mt-1">
-                Fund your account and send a test payment on the Stellar Testnet.
-              </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Claim */}
+              {/* Claim Faucet */}
               <div className="card-inset rounded-xl p-4 flex flex-col justify-between space-y-3">
                 <div>
                   <h3 className="text-[12px] font-semibold text-slate-200 mb-1">
@@ -505,24 +306,14 @@ export default function App() {
                 </div>
                 <button
                   onClick={handleClaimXlm}
-                  disabled={!walletAddress || isClaiming || isTransacting}
-                  className="btn-primary w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-[12px] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  disabled={!walletAddress || friendbotTx.status === 'pending' || friendbotTx.status === 'signing' || paymentTx.status === 'pending'}
+                  className="btn-primary w-full py-2 px-3 rounded-lg text-[12px] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition"
                 >
-                  {isClaiming ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Claiming…
-                    </>
-                  ) : (
-                    <>
-                      <Droplet className="w-3.5 h-3.5" />
-                      Claim 10,000 XLM
-                    </>
-                  )}
+                  Claim 10,000 XLM
                 </button>
               </div>
 
-              {/* Send */}
+              {/* Send Payment */}
               <div className="card-inset rounded-xl p-4 flex flex-col justify-between space-y-3">
                 <div>
                   <h3 className="text-[12px] font-semibold text-slate-200 mb-1">
@@ -534,46 +325,53 @@ export default function App() {
                 </div>
                 <button
                   onClick={handleSendTransaction}
-                  disabled={!walletAddress || isClaiming || isTransacting || isUnfunded}
-                  className="btn-ghost w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-[12px] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  disabled={!walletAddress || isUnfunded || paymentTx.status === 'pending' || paymentTx.status === 'signing' || friendbotTx.status === 'pending'}
+                  className="btn-ghost w-full py-2 px-3 rounded-lg text-[12px] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition"
                 >
-                  {isTransacting ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
-                      Sending…
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-3.5 h-3.5 text-cyan-400" />
-                      Send 10 XLM
-                    </>
-                  )}
+                  Send 10 XLM
                 </button>
               </div>
             </div>
           </section>
 
-          {/* ── Activity Feed ── */}
+          {/* Smart Contract Activity Logger Panel */}
+          {CONTRACT_ID && (
+            <ContractActions
+              contractId={CONTRACT_ID}
+              walletConnected={!!walletAddress}
+              onLogActivity={handleCustomContractLog}
+              isTransacting={contractTx.status === 'building' || contractTx.status === 'signing' || contractTx.status === 'pending'}
+            />
+          )}
+
+          {/* Real-time Activity Feed from Contract */}
+          <ActivityFeed
+            logs={onChainFeed}
+            isPolling={isPolling}
+            onRefresh={refreshFeed}
+            onClearLocalLogs={handleClearLogs}
+            showClearBtn={logs.length > 0}
+          />
+
+          {/* Debug Console Log */}
           <section className="console-wrap animate-fade-in delay-300">
             <div className="console-header">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">
-                Activity Feed
+                System Console Debug Log
               </span>
               {logs.length > 0 && (
                 <button
                   onClick={handleClearLogs}
-                  className="text-[10px] text-slate-600 hover:text-slate-300 font-mono transition cursor-pointer flex items-center gap-1"
+                  className="text-[10px] text-slate-600 hover:text-slate-300 font-mono transition cursor-pointer"
                 >
-                  <Trash2 className="w-3 h-3" />
                   Clear
                 </button>
               )}
             </div>
-
-            <div className="console-body font-mono text-[11px] leading-relaxed space-y-1.5">
+            <div className="console-body font-mono text-[11px] leading-relaxed space-y-1 max-h-[120px] overflow-y-auto">
               {logs.length === 0 ? (
                 <div className="text-slate-600 italic">
-                  Waiting for activity… connect your wallet to get started.
+                  Console idle. Connect wallet to trigger events.
                 </div>
               ) : (
                 logs.map((log) => (
@@ -581,7 +379,7 @@ export default function App() {
                     <span className="text-slate-700 shrink-0 select-none">[{log.timestamp}]</span>
                     <span
                       className={`
-                        font-semibold uppercase text-[9px] px-1.5 py-0.5 rounded shrink-0
+                        font-semibold uppercase text-[9px] px-1 py-0.5 rounded shrink-0
                         ${log.type === 'success' ? 'bg-teal-500/10 text-teal-400' : ''}
                         ${log.type === 'error' ? 'bg-red-500/10 text-red-400' : ''}
                         ${log.type === 'info' ? 'bg-cyan-500/8 text-cyan-400' : ''}
@@ -593,54 +391,13 @@ export default function App() {
                   </div>
                 ))
               )}
-              <div ref={logsEndRef} />
             </div>
-
-            {/* Result alerts */}
-            {(lastTxHash || lastError) && (
-              <div className="p-4 border-t border-cyan-500/8 space-y-3">
-                {lastTxHash && (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-teal-500/5 border border-teal-500/15 text-teal-200">
-                    <div className="flex items-start gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 shrink-0 text-teal-400 mt-0.5" />
-                      <div>
-                        <span className="font-semibold text-[12px] text-white block">Transaction Confirmed</span>
-                        <p className="text-[11px] text-slate-400 mt-0.5">
-                          Payment successfully sent on Stellar Testnet.
-                        </p>
-                      </div>
-                    </div>
-                    <a
-                      href={`https://stellar.expert/explorer/testnet/tx/${lastTxHash}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 font-semibold border border-teal-500/15 text-[11px] transition cursor-pointer whitespace-nowrap"
-                    >
-                      View on Explorer
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
-                )}
-
-                {lastError && (
-                  <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-red-500/5 border border-red-500/12 text-red-200">
-                    <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <span className="font-semibold text-[12px] text-white block">Error</span>
-                      <p className="text-[11px] text-red-400/80 font-mono break-all whitespace-pre-wrap mt-0.5">
-                        {lastError}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
           </section>
 
         </div>
 
-        {/* ─── Footer ─── */}
-        <div className="px-6 py-3.5 border-t border-cyan-500/6 flex items-center justify-center">
+        {/* Footer */}
+        <div className="px-6 py-3.5 border-t border-cyan-500/6 flex items-center justify-center bg-slate-950/20">
           <span className="text-[10px] text-slate-600 tracking-wide">
             Built on Stellar · Testnet only · Not for real funds
           </span>

@@ -92,7 +92,39 @@ Make sure you have [Node.js](https://nodejs.org/) installed, and the [Freighter 
 
 ---
 
+## 🟡 Level 2 Upgrade (Yellow Belt)
+
+Level 2 upgrades Faucet Dash into a multi-wallet, smart-contract-powered dashboard with real-time on-chain event tracking.
+
+### Deployed Contract Details
+- **Smart Contract ID**: `CAYQ7KOH25S6EDCQTBIG4PIAULUHYO4TFJ3LXKCV75AAOGNIPG7XK2XK` (view on [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CAYQ7KOH25S6EDCQTBIG4PIAULUHYO4TFJ3LXKCV75AAOGNIPG7XK2XK))
+- **Contract Instantiate Transaction Hash**: `ffb51fdd225f5b620d5b02b9c980f4d34548cb7dbc963fea3a0599b0f8967784` (view on [Stellar Expert Explorer](https://stellar.expert/explorer/testnet/tx/ffb51fdd225f5b620d5b02b9c980f4d34548cb7dbc963fea3a0599b0f8967784))
+
+### Level 2 Setup & Installation
+
+1. Copy the `.env.example` template into a new `.env` file in the root directory:
+   ```bash
+   cp .env.example .env
+   ```
+2. Build the application for production to generate optimized chunk files:
+   ```bash
+   npm run build
+   ```
+
+### 🛠️ Tech Stack & Architecture
+
+- **Framework**: React 19 (TypeScript)
+- **Build Tool**: Vite 8
+- **Styling**: Tailwind CSS v4 + Custom HSL glassmorphism design tokens
+- **Stellar Libraries**:
+  - `@stellar/stellar-sdk` (Horizon Client, Transaction Builder, Operations, Soroban / Stellar RPC)
+  - `@creit.tech/stellar-wallets-kit` (Unified wallet selector supporting Freighter, Lobstr, xBull, Hana, Rabet, Albedo)
+- **Vite Polyfills**: `vite-plugin-node-polyfills`
+
+---
+
 ## ⚠️ Important Developer Notes
 
 - **Testnet Only**: This application is configured to interact strictly with the **Stellar Testnet** (`https://horizon-testnet.stellar.org`) and uses the Testnet passphrase. Do not attempt to sign Mainnet transactions.
 - **Freighter Extension Settings**: Ensure your Freighter extension is configured to the **Test Net** network before testing transaction signing.
+
