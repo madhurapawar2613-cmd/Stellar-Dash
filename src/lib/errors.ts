@@ -1,5 +1,15 @@
 import type { AppError } from '../types';
 
+/**
+ * Classifies any raw wallet/network error into one of the 3 Level 2 typed app errors:
+ *
+ * - `WALLET_NOT_FOUND`     → shown as amber banner when no wallet extension is detected
+ * - `USER_REJECTED`        → shown as blue banner when user cancels the signing popup
+ * - `INSUFFICIENT_BALANCE` → shown as red banner with a "Request Friendbot XLM" CTA
+ * - `UNKNOWN`              → fallback red banner for any other unexpected errors
+ *
+ * All classified errors auto-dismiss from the UI after 8 seconds.
+ */
 export function classifyError(error: any): AppError {
   const message = error?.message || String(error);
   const lowercaseMessage = message.toLowerCase();
