@@ -54,6 +54,20 @@ Clicking **Send 10 XLM** constructs a test payment transaction and opens the Fre
 Once signed, the transaction is broadcasted to the Stellar Testnet. Upon confirmation, a success alert is shown with a link to view the transaction on the Stellar Expert explorer.
 ![Transaction Confirmed](./docs/images/7_transaction_confirmed_success.png)
 
+### 8. 🛡️ Error Handling — 3 Error Types (Level 2 Requirement)
+
+The dashboard implements **3 distinct typed error banners** that appear when something goes wrong:
+
+| Error Type | Trigger | Banner Color |
+|---|---|---|
+| `WALLET_NOT_FOUND` | Wallet extension not installed | 🟡 Amber |
+| `USER_REJECTED` | User cancels the wallet signing popup | 🔵 Blue |
+| `INSUFFICIENT_BALANCE` | Account has insufficient XLM | 🔴 Red |
+
+Each banner auto-dismisses after 8 seconds or can be closed manually. The `INSUFFICIENT_BALANCE` banner includes a **"Request Friendbot XLM"** action button directly inside the error message.
+
+![Error Handling Banners](./docs/images/error_banners.png)
+
 ---
 
 ## 🛠️ Tech Stack & Architecture
