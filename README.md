@@ -1,5 +1,8 @@
 # ⚡ Faucet Dash
 
+> [!TIP]
+> **Live Demo**: [stellar-dash-one.vercel.app](https://stellar-dash-one.vercel.app/)
+
 **Faucet Dash** is a premium, modern developer dashboard for interacting with the **Stellar Testnet**. Built with React, TypeScript, and Tailwind CSS, it offers a visual interface for developers to connect their **Freighter** wallet, check their testnet balance, request funds from Friendbot, and sign test transactions safely.
 
 ---

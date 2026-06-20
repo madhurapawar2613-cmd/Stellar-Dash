@@ -1,4 +1,4 @@
-import { Contract, TransactionBuilder, Networks, Account, scValToNative, nativeToScVal } from '@stellar/stellar-sdk';
+import { Contract, TransactionBuilder, Networks, Account, scValToNative, nativeToScVal, Keypair } from '@stellar/stellar-sdk';
 import { rpc } from './stellar';
 
 export async function callContractView(
@@ -6,7 +6,7 @@ export async function callContractView(
   method: string,
   args: any[] = []
 ): Promise<any> {
-  const dummyAddress = 'GBBP7VKHGQL4UBNCSR2J4PA7QWIN6Y23Z252T6IZRVC75K23S7Z6L2TZ';
+  const dummyAddress = Keypair.random().publicKey();
   const sourceAccount = new Account(dummyAddress, '0');
   const contract = new Contract(contractId);
 
