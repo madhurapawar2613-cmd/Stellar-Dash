@@ -85,7 +85,10 @@ export function WalletConnect({
                 <span className="text-[13px]" role="img" aria-label={walletName}>
                   {walletIcon}
                 </span>
-                <code className="text-slate-200 text-[12px] font-medium select-all">
+                <code
+                  className="text-slate-200 text-[12px] font-medium select-all cursor-text"
+                  title={walletAddress}
+                >
                   {truncateAddress(walletAddress)}
                 </code>
               </div>
@@ -122,7 +125,10 @@ export function WalletConnect({
                 <span className="text-[11px] text-slate-500 ml-1.5 font-medium">XLM</span>
               </div>
               {isUnfunded && (
-                <span className="text-[9px] bg-amber-500/10 text-amber-400/90 font-bold px-1.5 py-0.5 rounded border border-amber-500/15">
+                <span
+                  className="text-[9px] bg-amber-500/10 text-amber-400/90 font-bold px-1.5 py-0.5 rounded border border-amber-500/15 cursor-default"
+                  title="Account has no XLM. Claim from Friendbot to activate."
+                >
                   UNACTIVATED
                 </span>
               )}
