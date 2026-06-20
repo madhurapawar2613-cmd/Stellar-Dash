@@ -62,7 +62,10 @@ export function ActivityFeed({
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
             On-Chain Ledger Activity Feed
           </span>
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/15 text-[9px] font-bold">
+          <span
+            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/15 text-[9px] font-bold"
+            aria-label="Live polling on-chain data every 5 seconds"
+          >
             <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse" />
             LIVE
           </span>
@@ -96,7 +99,7 @@ export function ActivityFeed({
       <div className="console-body font-mono text-[11px] leading-relaxed space-y-2 max-h-[220px] overflow-y-auto">
         {logs.length === 0 ? (
           <div className="text-slate-600 italic py-4 text-center">
-            No on-chain activity logs found. Interact with the dashboard to write logs.
+            No on-chain activity logged yet. Connect wallet and perform an action — logs auto-refresh every 5 seconds.
           </div>
         ) : (
           logs.map((log, idx) => (
