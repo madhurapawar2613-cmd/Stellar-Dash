@@ -66,7 +66,15 @@ The dashboard implements **3 distinct typed error banners** that appear when som
 
 Each banner auto-dismisses after 8 seconds or can be closed manually. The `INSUFFICIENT_BALANCE` banner includes a **"Request Friendbot XLM"** action button directly inside the error message.
 
-![Error Handling Banners](./docs/images/error_banners.png)
+**Error 1 — Wallet Not Installed (Amber):**
+![WALLET_NOT_FOUND](./docs/images/error_wallet_not_found_real.png)
+
+**Error 2 — Transaction Rejected (Blue):**
+![USER_REJECTED](./docs/images/error_user_rejected_real.png)
+
+**Error 3 — Insufficient XLM Balance (Red):**
+![INSUFFICIENT_BALANCE](./docs/images/error_insufficient_balance_real.png)
+
 
 ---
 
