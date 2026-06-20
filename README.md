@@ -1,161 +1,194 @@
+<div align="center">
+
+<img src="./docs/images/dashboard_real.png" alt="Faucet Dash Dashboard" width="600" />
+
 # ⚡ Faucet Dash
 
-> [!TIP]
-> **Live Demo**: [stellar-dash-one.vercel.app](https://stellar-dash-one.vercel.app/)
+### Multi-Wallet Stellar Testnet Dashboard with Smart Contract Integration
 
-**Faucet Dash** is a premium, modern developer dashboard for interacting with the **Stellar Testnet**. Built with React, TypeScript, and Tailwind CSS, it offers a visual interface for developers to connect their **Freighter** wallet, check their testnet balance, request funds from Friendbot, and sign test transactions safely.
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-stellar--dash--one.vercel.app-cyan?style=for-the-badge&logo=vercel)](https://stellar-dash-one.vercel.app/)
+[![Stellar](https://img.shields.io/badge/Network-Stellar%20Testnet-6B46C1?style=for-the-badge&logo=stellar)](https://stellar.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&logo=vite)](https://vitejs.dev/)
+[![Tailwind](https://img.shields.io/badge/Tailwind%20CSS-v4-06B6D4?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
 
----
-
-## 🚀 Features
-
-- **Freighter Wallet Integration**: Securely connect and authorize the dashboard using the Freighter browser extension (`@stellar/freighter-api`).
-- **Real-time Balance Checker**: Instantly check and refresh your account's testnet XLM balance.
-- **Friendbot XLM Faucet**: Request 10,000 testnet lumens (XLM) at the click of a button to activate or fund your account.
-- **Test Payments signing**: Build and sign a 10 XLM test payment to a randomly generated Stellar address to verify transaction signing.
-- **Real-time Activity Log**: A live console tracking every state change, transaction building, signing, and broadcasting activity.
-- **Deep Space UI**: Premium, dark-mode design system utilizing glassmorphism, glowing accents, and smooth float animations.
+</div>
 
 ---
 
-## 📸 User Flow & Screenshots
+## 📖 Overview
 
-Below is the step-by-step workflow of Faucet Dash, showing the wallet connection and testnet faucet request:
+**Faucet Dash** is a premium developer dashboard for interacting with the **Stellar Testnet**. It combines multi-wallet connectivity (via StellarWalletsKit), smart contract integration, and real-time on-chain event streaming into a beautifully crafted dark-mode interface.
 
-### 1. Faucet Dash UI Loaded
-Upon launching the dashboard, the interface automatically runs a check for the Freighter extension. The activity feed logs the detection status.
-![Faucet Dash Loaded](./docs/images/1_faucet_dash_loaded.png)
+Built for the **Yellow Belt (Level 2)** challenge, this project demonstrates:
+- 🔗 Multi-wallet support across 5+ Stellar wallets
+- 📜 Deployed Soroban smart contract with frontend integration
+- 🛡️ Typed error handling with 3 distinct error states
+- 🔄 Real-time on-chain activity feed with 5-second polling
+- 📊 Live transaction status tracking across 6 lifecycle states
 
-### 2. Ready to Connect
-The actions panel remains disabled until a wallet is connected, ensuring a safe developer workflow.
-![Faucet Dash Ready to Connect](./docs/images/2_faucet_dash_actions.png)
+---
 
-### 2.5 Wallet Options Available (Multi-Wallet Selection)
-Clicking **Connect Wallet** displays the `StellarWalletsKit` selector dialog with multiple wallet integrations (Freighter, Lobstr, xBull, Hana, Rabet, Albedo).
-![Wallet Options Available](./docs/images/wallet_selector.png)
+## ✨ Features
 
-### 3. Freighter Wallet Connection Request
-Clicking **Connect Freighter** prompts the extension to launch a secure connection authorization popup to link your public address to the dashboard.
-![Freighter Connection Request](./docs/images/3_freighter_connection_request.png)
+| Feature | Description |
+|---|---|
+| **Multi-Wallet Integration** | StellarWalletsKit supporting Freighter, Albedo, xBull, Rabet, Fordefi |
+| **Smart Contract Logger** | Deployed Soroban `ActivityLogger` contract called directly from the UI |
+| **Real-Time Activity Feed** | On-chain events polled every 5s and displayed as a live ledger feed |
+| **Transaction Status Tracker** | 6-state lifecycle: `idle → building → signing → pending → success/failed` |
+| **3 Typed Error Banners** | `WALLET_NOT_FOUND`, `USER_REJECTED`, `INSUFFICIENT_BALANCE` |
+| **Friendbot Faucet** | One-click 10,000 testnet XLM funding for new accounts |
+| **Test Payment Signing** | Build, sign, and broadcast a 10 XLM payment via the connected wallet |
+| **Balance Refresh** | Live XLM balance with manual refresh and unfunded account detection |
 
-### 4. Wallet Connected & Balance Updated
-Once connected, the wallet panel displays your truncated Stellar public key (with copy-to-clipboard functionality) and fetches your live testnet XLM balance.
-![Wallet Connected](./docs/images/4_faucet_dash_connected.png)
+---
 
-### 5. Requesting Testnet XLM (Friendbot Funding)
-Requesting funds triggers a fetch to the Stellar Friendbot. The transaction is logged in the activity console in real-time.
-![Account Funded](./docs/images/5_activity_feed_funded.png)
+## 🖥️ Screenshots
 
-### 6. Test Payment Transaction Signing
-Clicking **Send 10 XLM** constructs a test payment transaction and opens the Freighter extension popup requesting you to sign and confirm the transaction.
-![Freighter Transaction Signing](./docs/images/6_freighter_transaction_signing.png)
+### Dashboard — Connected State
+The main dashboard showing wallet integration, contract actions, and the real-time on-chain activity feed.
 
-### 7. Transaction Confirmed & Explorer Link
-Once signed, the transaction is broadcasted to the Stellar Testnet. Upon confirmation, a success alert is shown with a link to view the transaction on the Stellar Expert explorer.
-![Transaction Confirmed](./docs/images/7_transaction_confirmed_success.png)
+![Dashboard Overview](./docs/images/dashboard_real.png)
 
-### 8. 🛡️ Error Handling — 3 Error Types (Level 2 Requirement)
+### Multi-Wallet Selector
+Clicking **Connect Wallet** opens the `StellarWalletsKit` modal with all supported wallets.
 
-The dashboard implements **3 distinct typed error banners** that appear when something goes wrong:
+![Wallet Selector Modal](./docs/images/wallet_modal_real.png)
 
-| Error Type | Trigger | Banner Color |
+---
+
+## 🛡️ Error Handling — 3 Typed Error States
+
+The dashboard implements **3 distinct typed error banners** triggered by real error conditions:
+
+| Error Type | Trigger Condition | UI |
 |---|---|---|
-| `WALLET_NOT_FOUND` | Wallet extension not installed | 🟡 Amber |
-| `USER_REJECTED` | User cancels the wallet signing popup | 🔵 Blue |
-| `INSUFFICIENT_BALANCE` | Account has insufficient XLM | 🔴 Red |
+| `WALLET_NOT_FOUND` | Wallet extension not installed in browser | 🟡 Amber banner |
+| `USER_REJECTED` | User cancels the wallet signing popup | 🔵 Blue banner |
+| `INSUFFICIENT_BALANCE` | Account balance < 11 XLM before payment | 🔴 Red banner with Friendbot CTA |
 
-Each banner auto-dismisses after 8 seconds or can be closed manually. The `INSUFFICIENT_BALANCE` banner includes a **"Request Friendbot XLM"** action button directly inside the error message.
+Each banner auto-dismisses after 8 seconds and can be closed manually.
 
-**Error 1 — Wallet Not Installed (Amber):**
-![WALLET_NOT_FOUND](./docs/images/error_wallet_not_found_real.png)
+**`WALLET_NOT_FOUND` — Amber:**
+![Wallet Not Installed](./docs/images/error_wallet_not_found_real.png)
 
-**Error 2 — Transaction Rejected (Blue):**
-![USER_REJECTED](./docs/images/error_user_rejected_real.png)
+**`USER_REJECTED` — Blue:**
+![Transaction Rejected](./docs/images/error_user_rejected_real.png)
 
-**Error 3 — Insufficient XLM Balance (Red):**
-![INSUFFICIENT_BALANCE](./docs/images/error_insufficient_balance_real.png)
-
-
----
-
-## 🛠️ Tech Stack & Architecture
-
-- **Framework**: React 19 (TypeScript)
-- **Build Tool**: Vite 8
-- **Styling**: Tailwind CSS v4 + Custom HSL glassmorphism design tokens
-- **Stellar Libraries**:
-  - `@stellar/stellar-sdk` (Horizon Client, Transaction Builder, Operations)
-  - `@stellar/freighter-api` (Wallet communication and signing)
-- **Vite Polyfills**: `vite-plugin-node-polyfills` (required for buffer/process polyfills when compiling Stellar transaction XDRs)
+**`INSUFFICIENT_BALANCE` — Red:**
+![Insufficient Balance](./docs/images/error_insufficient_balance_real.png)
 
 ---
 
-## 🏃 Getting Started
+## 📜 Smart Contract — ActivityLogger
+
+The `ActivityLogger` Soroban smart contract is deployed on the Stellar Testnet and called directly from the frontend.
+
+| Detail | Value |
+|---|---|
+| **Contract ID** | [`CAYQ7KOH25S6EDCQTBIG4PIAULUHYO4TFJ3LXKCV75AAOGNIPG7XK2XK`](https://stellar.expert/explorer/testnet/contract/CAYQ7KOH25S6EDCQTBIG4PIAULUHYO4TFJ3LXKCV75AAOGNIPG7XK2XK) |
+| **Deploy Tx Hash** | [`ffb51fdd225f...`](https://stellar.expert/explorer/testnet/tx/ffb51fdd225f5b620d5b02b9c980f4d34548cb7dbc963fea3a0599b0f8967784) |
+| **Verified Contract Call** | [`cc7e44f5b446...`](https://stellar.expert/explorer/testnet/tx/cc7e44f5b4464754b30d96a9038f3da82d9c21fa78171f35311a65e17b27c415) |
+| **Network** | Stellar Testnet |
+
+The contract exposes two functions:
+- `log_activity(user: Address, action: String)` — writes a timestamped log entry to the ledger
+- `get_all_logs()` — returns all stored activity entries for real-time feed polling
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Framework** | React 19 + TypeScript |
+| **Build Tool** | Vite 8 |
+| **Styling** | Tailwind CSS v4 + Custom glassmorphism design tokens |
+| **Wallet SDK** | `@creit.tech/stellar-wallets-kit` v2.3.0 |
+| **Stellar SDK** | `@stellar/stellar-sdk` (Horizon + Soroban RPC) |
+| **Deployment** | Vercel (auto-deploy from `main` branch) |
+| **Polyfills** | `vite-plugin-node-polyfills` (Buffer/process for XDR) |
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
-Make sure you have [Node.js](https://nodejs.org/) installed, and the [Freighter Extension](https://www.freighter.app/) added to your browser.
+
+- [Node.js](https://nodejs.org/) v18+
+- A Stellar wallet browser extension (e.g. [Freighter](https://www.freighter.app/))
 
 ### Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/stellar-dash.git
-   cd stellar-dash
-   ```
+```bash
+# 1. Clone the repository
+git clone https://github.com/madhurapawar2613-cmd/Stellar-Dash.git
+cd Stellar-Dash
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+# 2. Install dependencies
+npm install
 
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:5173/](http://localhost:5173/) in your browser to view the application.
+# 3. Configure environment variables
+cp .env.example .env
+# Edit .env and set VITE_CONTRACT_ID to the deployed contract address
 
-4. Build the application for production:
-   ```bash
-   npm run build
-   ```
+# 4. Start development server
+npm run dev
+```
 
----
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-## 🟡 Level 2 Upgrade (Yellow Belt)
+### Environment Variables
 
-Level 2 upgrades Faucet Dash into a multi-wallet, smart-contract-powered dashboard with real-time on-chain event tracking.
+```env
+VITE_CONTRACT_ID=CAYQ7KOH25S6EDCQTBIG4PIAULUHYO4TFJ3LXKCV75AAOGNIPG7XK2XK
+```
 
-### Deployed Contract Details
-- **Smart Contract ID**: `CAYQ7KOH25S6EDCQTBIG4PIAULUHYO4TFJ3LXKCV75AAOGNIPG7XK2XK` (view on [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CAYQ7KOH25S6EDCQTBIG4PIAULUHYO4TFJ3LXKCV75AAOGNIPG7XK2XK))
-- **Contract Instantiate Transaction Hash**: `ffb51fdd225f5b620d5b02b9c980f4d34548cb7dbc963fea3a0599b0f8967784` (view on [Stellar Expert Explorer](https://stellar.expert/explorer/testnet/tx/ffb51fdd225f5b620d5b02b9c980f4d34548cb7dbc963fea3a0599b0f8967784))
-- **Verifiable Contract Call Transaction Hash (`log_activity`)**: `cc7e44f5b4464754b30d96a9038f3da82d9c21fa78171f35311a65e17b27c415` (view on [Stellar Expert Explorer](https://stellar.expert/explorer/testnet/tx/cc7e44f5b4464754b30d96a9038f3da82d9c21fa78171f35311a65e17b27c415))
-- **Live Demo Link**: [stellar-dash-one.vercel.app](https://stellar-dash-one.vercel.app/)
+### Build for Production
 
-### Level 2 Setup & Installation
-
-1. Copy the `.env.example` template into a new `.env` file in the root directory:
-   ```bash
-   cp .env.example .env
-   ```
-2. Build the application for production to generate optimized chunk files:
-   ```bash
-   npm run build
-   ```
-
-### 🛠️ Tech Stack & Architecture
-
-- **Framework**: React 19 (TypeScript)
-- **Build Tool**: Vite 8
-- **Styling**: Tailwind CSS v4 + Custom HSL glassmorphism design tokens
-- **Stellar Libraries**:
-  - `@stellar/stellar-sdk` (Horizon Client, Transaction Builder, Operations, Soroban / Stellar RPC)
-  - `@creit.tech/stellar-wallets-kit` (Unified wallet selector supporting Freighter, Lobstr, xBull, Hana, Rabet, Albedo)
-- **Vite Polyfills**: `vite-plugin-node-polyfills`
+```bash
+npm run build
+npm run preview
+```
 
 ---
 
-## ⚠️ Important Developer Notes
+## 📁 Project Structure
 
-- **Testnet Only**: This application is configured to interact strictly with the **Stellar Testnet** (`https://horizon-testnet.stellar.org`) and uses the Testnet passphrase. Do not attempt to sign Mainnet transactions.
-- **Freighter Extension Settings**: Ensure your Freighter extension is configured to the **Test Net** network before testing transaction signing.
+```
+src/
+├── components/
+│   ├── ActivityFeed.tsx      # Real-time on-chain event feed
+│   ├── ContractActions.tsx   # Smart contract call UI
+│   ├── ErrorBanner.tsx       # Typed error banner component (3 states)
+│   ├── TransactionStatus.tsx # 6-state transaction status bar
+│   └── WalletConnect.tsx     # Multi-wallet connection panel
+├── hooks/
+│   ├── useActivityFeed.ts    # Polls contract every 5s for new logs
+│   ├── useContract.ts        # Soroban transaction builder & submitter
+│   ├── useTransactionStatus.ts # idle/building/signing/pending/success/failed
+│   └── useWallet.ts          # StellarWalletsKit integration
+├── lib/
+│   ├── contract.ts           # Contract read/write helpers (Soroban RPC)
+│   ├── errors.ts             # classifyError() → typed AppError
+│   └── stellar.ts            # Horizon server instance
+└── App.tsx                   # Root orchestrator
+```
 
+---
+
+## ⚠️ Important Notes
+
+> **Testnet Only** — This app is configured strictly for the Stellar Testnet. Do not use with real funds.
+
+> **Wallet Network** — Ensure your Freighter (or other wallet) is set to **Test Net** before connecting.
+
+---
+
+## 🔗 Links
+
+- 🌐 **Live Demo**: [stellar-dash-one.vercel.app](https://stellar-dash-one.vercel.app/)
+- 📦 **GitHub**: [madhurapawar2613-cmd/Stellar-Dash](https://github.com/madhurapawar2613-cmd/Stellar-Dash)
+- 🔍 **Contract on Explorer**: [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CAYQ7KOH25S6EDCQTBIG4PIAULUHYO4TFJ3LXKCV75AAOGNIPG7XK2XK)
