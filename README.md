@@ -30,6 +30,10 @@ Upon launching the dashboard, the interface automatically runs a check for the F
 The actions panel remains disabled until a wallet is connected, ensuring a safe developer workflow.
 ![Faucet Dash Ready to Connect](./docs/images/2_faucet_dash_actions.png)
 
+### 2.5 Wallet Options Available (Multi-Wallet Selection)
+Clicking **Connect Wallet** displays the `StellarWalletsKit` selector dialog with multiple wallet integrations (Freighter, Lobstr, xBull, Hana, Rabet, Albedo).
+![Wallet Options Available](./docs/images/wallet_selector.png)
+
 ### 3. Freighter Wallet Connection Request
 Clicking **Connect Freighter** prompts the extension to launch a secure connection authorization popup to link your public address to the dashboard.
 ![Freighter Connection Request](./docs/images/3_freighter_connection_request.png)
@@ -102,6 +106,7 @@ Level 2 upgrades Faucet Dash into a multi-wallet, smart-contract-powered dashboa
 ### Deployed Contract Details
 - **Smart Contract ID**: `CAYQ7KOH25S6EDCQTBIG4PIAULUHYO4TFJ3LXKCV75AAOGNIPG7XK2XK` (view on [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CAYQ7KOH25S6EDCQTBIG4PIAULUHYO4TFJ3LXKCV75AAOGNIPG7XK2XK))
 - **Contract Instantiate Transaction Hash**: `ffb51fdd225f5b620d5b02b9c980f4d34548cb7dbc963fea3a0599b0f8967784` (view on [Stellar Expert Explorer](https://stellar.expert/explorer/testnet/tx/ffb51fdd225f5b620d5b02b9c980f4d34548cb7dbc963fea3a0599b0f8967784))
+- **Verifiable Contract Call Transaction Hash (`log_activity`)**: `cc7e44f5b4464754b30d96a9038f3da82d9c21fa78171f35311a65e17b27c415` (view on [Stellar Expert Explorer](https://stellar.expert/explorer/testnet/tx/cc7e44f5b4464754b30d96a9038f3da82d9c21fa78171f35311a65e17b27c415))
 - **Live Demo Link**: [stellar-dash-one.vercel.app](https://stellar-dash-one.vercel.app/)
 
 ### Level 2 Setup & Installation
