@@ -99,6 +99,7 @@ Level 2 upgrades Faucet Dash into a multi-wallet, smart-contract-powered dashboa
 ### Deployed Contract Details
 - **Smart Contract ID**: `CAYQ7KOH25S6EDCQTBIG4PIAULUHYO4TFJ3LXKCV75AAOGNIPG7XK2XK` (view on [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CAYQ7KOH25S6EDCQTBIG4PIAULUHYO4TFJ3LXKCV75AAOGNIPG7XK2XK))
 - **Contract Instantiate Transaction Hash**: `ffb51fdd225f5b620d5b02b9c980f4d34548cb7dbc963fea3a0599b0f8967784` (view on [Stellar Expert Explorer](https://stellar.expert/explorer/testnet/tx/ffb51fdd225f5b620d5b02b9c980f4d34548cb7dbc963fea3a0599b0f8967784))
+- **Live Demo Link**: [stellar-dash-one.vercel.app](https://stellar-dash-one.vercel.app/)
 
 ### Level 2 Setup & Installation
 
